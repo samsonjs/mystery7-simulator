@@ -30,8 +30,14 @@ class Roulette
     :z => [0, 2, 16, 19, 33, 36]
   }
 
-  BettingSequence = [1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 5, 6, 8, 10, 12, 15]
-  NetProfits = [29, 22, 15, 8, 1, 23, 9, 24, 3, 11, 12, 6, 22, 24, 12, 15]
+  # original
+  # BettingSequence = [1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 5, 6, 8, 10, 12, 15]
+
+  # better
+  BettingSequence = [1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8, 10, 12, 15, 18]
+
+  # best?
+  # BettingSequence = [1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 6, 7, 8, 10, 12, 15, 18]
 
   attr_accessor :results, :counts, :set_status
 
@@ -64,6 +70,13 @@ class Roulette
         :wins => 0
       }
     end
+
+    total_per_number = 0
+    @net_profits = BettingSequence.map do |n|
+      total_per_number += n
+      36 * n - 7 * total_per_number
+    end
+    @snake_penalty = 7 * total_per_number
   end
 
   def simulate
@@ -95,7 +108,7 @@ class Roulette
         if status[:sleeping]
           status[:sleeping] = false
         else
-          status[:net] += NetProfits[status[:sequence]]
+          status[:net] += @net_profits[status[:sequence]]
           status[:sequence] = 0
           status[:wins] += 1
         end
@@ -112,7 +125,7 @@ class Roulette
         status[:sequence] = 0
         status[:sleeping] = true
         status[:snakes] += 1
-        status[:net] -= 525
+        status[:net] -= @snake_penalty
       end
       if status[:sequence] > 0 && status[:sequence] % @options[:misses] == 0
         status[:sleeping] = true
