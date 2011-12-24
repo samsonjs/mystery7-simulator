@@ -55,11 +55,18 @@ class Roulette
       @sets[:z].insert(2, 5)
     end
 
-    @rng = @options[:seed] ? Random.new(@options[:seed]) : Random.new
-
     # generated numbers are from 0 to max
     @max = @options[:style] == 'American' ? 38 : 37
 
+    total_per_number = 0
+    @net_profits = BettingSequence.map do |n|
+      total_per_number += n
+      36 * n - 7 * total_per_number
+    end
+    @snake_penalty = 7 * total_per_number
+  end
+
+  def simulate
     @set_status = {}
     Sets.keys.each do |key|
       @set_status[key] = {
@@ -71,19 +78,11 @@ class Roulette
       }
     end
 
-    total_per_number = 0
-    @net_profits = BettingSequence.map do |n|
-      total_per_number += n
-      36 * n - 7 * total_per_number
-    end
-    @snake_penalty = 7 * total_per_number
-  end
-
-  def simulate
     @results = []
     @counts = Hash.new { 0 }
+    @rng = @options[:seed] ? Random.new(@options[:seed]) : Random.new
 
-    @options[:iterations].times do
+    @options[:spins].times do
       result = spin
       record(result) if @options[:record]
       if @results.length % 100_000 == 0
@@ -92,7 +91,7 @@ class Roulette
         print '.'
       end
     end
-    puts
+    puts if @results.length >= 10_000
   end
 
   def spin
