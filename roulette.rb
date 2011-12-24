@@ -1,25 +1,8 @@
 require 'rubygems'
 require 'bundler/setup'
 require 'sqlite3'
-require './result'
 
 class Roulette
-
-  # B: Black
-  # G: Green
-  # R: Red
-  Colours = {
-    'American' => %w[G R B R B R B R B R B B R B R B R B R R B R B R B R B R B B R B R B R B R G],
-    'European' => %w[G R B R B R B R B R B B R B R B R B R R B R B R B R B R B B R B R B R B R]
-  }
-
-  # F: Foundation
-  # M: Middle
-  # U: Upper
-  FMU = {
-    'American' => ['Z'] + %w[F M U] * 12,
-    'European' => ['Z'] + %w[F M U] * 12 + ['Z']
-  }
 
   Sets = {
     :j => [1, 2, 3, 13, 15, 26, 27],
@@ -43,8 +26,6 @@ class Roulette
 
   def initialize(options)
     @options = options
-    @colours = Colours[@options[:style]]
-    @fmu = FMU[@options[:style]]
     @sets = {}
     Sets.keys.each do |key|
       @sets[key] = Sets[key].dup
@@ -64,6 +45,8 @@ class Roulette
       36 * n - 7 * total_per_number
     end
     @snake_penalty = 7 * total_per_number
+
+    @cumulative_net = 0
   end
 
   def simulate
@@ -95,19 +78,17 @@ class Roulette
   end
 
   def spin
-    if @options[:fixed_input]
-      n = @options[:input].shift
-    else
-      n = @rng.rand(@max)
-    end
+    n = @rng.rand(@max)
     letters = []
+    net = 0
     @sets.each do |letter, set|
       status = @set_status[letter]
       if set.include?(n)
         if status[:sleeping]
           status[:sleeping] = false
         else
-          status[:net] += @net_profits[status[:sequence]]
+          net = @net_profits[status[:sequence]]
+          status[:net] += net
           status[:sequence] = 0
           status[:wins] += 1
         end
@@ -125,20 +106,18 @@ class Roulette
         status[:sleeping] = true
         status[:snakes] += 1
         status[:net] -= @snake_penalty
+        net -= @snake_penalty
       end
       if status[:sequence] > 0 && status[:sequence] % @options[:misses] == 0
         status[:sleeping] = true
       end
     end
-    result = Result.new(
+    @cumulative_net += net
+    result = {
       :roll => n,
-      :sets => letters.join(','),
-      :parity => parity(n),
-      :colour => colour(n),
-      :highlow => high_or_low(n),
-      :abc => abc(n),
-      :fmu => fmu(n)
-    )
+      :net => net,
+      :cumulative_net => @cumulative_net
+    }
     if @options[:verbose]
       puts @results.length
       puts result.inspect
@@ -153,32 +132,6 @@ class Roulette
 
   def seed
     @rng.seed
-  end
-
-  def parity(n)
-    if n.even? then 'E' else 'O' end
-  end
-
-  def colour(n)
-    @colours[n]
-  end
-
-  def high_or_low(n)
-    if n <= 18 then 'H' else 'L' end
-  end
-
-  def abc(n)
-    if n <= 12
-      'A'
-    elsif n <= 24
-      'B'
-    else
-      'C'
-    end
-  end
-
-  def fmu(n)
-    @fmu[n]
   end
 
   def db
