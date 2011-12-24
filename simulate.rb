@@ -31,6 +31,8 @@ def main
     :wins => 0
   }
 
+  # all_results = []
+
   options[:sessions].times do
 
     roulette.simulate
@@ -60,11 +62,20 @@ def main
       puts "Snakes: #{status[:snakes]}"
     end
 
+    # all_results += roulette.results
+
   end
 
   puts "Net profit: #{overall_status[:net]}"
   puts "Wins: #{overall_status[:wins]}"
   puts "Snakes: #{overall_status[:snakes]}"
+
+  # File.open(File.expand_path('~/Dropbox/Mystery7/results.csv'), 'w') do |f|
+  #   f.puts('Roll, Net, Cumulative Net')
+  #   all_results.each do |result|
+  #     f.puts("#{result[:roll]}, #{result[:net]}, #{result[:cumulative_net]}")
+  #   end
+  # end
 
   puts ">>> Results are in #{options[:database]}." if options[:record]
 end
