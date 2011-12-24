@@ -22,7 +22,7 @@ class Roulette
   # best
   BettingSequence = [1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 6, 7, 8, 10, 12, 15, 18]
 
-  attr_accessor :results, :counts, :set_status
+  attr_accessor :results, :counts, :set_status, :wins
 
   def initialize(options)
     @options = options
@@ -64,13 +64,14 @@ class Roulette
     end
 
     @results = []
+    @wins = []
     @counts = Hash.new { 0 }
 
     @options[:spins].times do
       result = spin
       record(result) if @options[:record]
       if @results.length % 100_000 == 0
-        print @results.length / 100000
+        print @results.length / 100_000
       elsif @results.length % 10_000 == 0
         print '.'
       end
@@ -89,6 +90,7 @@ class Roulette
           status[:sleeping] = false
         else
           net = @net_profits[status[:sequence]]
+          @wins << { :set => letter, :sequence => 1 + status[:sequence] }
           status[:net] += net
           status[:sequence] = 0
           status[:wins] += 1

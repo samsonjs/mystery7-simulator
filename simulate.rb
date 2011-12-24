@@ -9,6 +9,8 @@ def main
   options = Trollop::options do
     opt :american, "American style, with 00", :short => 'a', :default => true
     opt :database, "Filename for results database", :type => String, :default => File.expand_path("~/Projects/Mystery7/results.sqlite")
+    opt :'dump-results', "Dump results to results.csv in Dropbox"
+    opt :'dump-wins', "Dump wins to wins.csv in Dropbox"
     opt :european, "European style, without 00", :short => 'e', :default => false
     opt :misses, "Number of misses before sleeping", :short => 'm', :default => 4
     opt :record, "Record results", :short => 'r'
@@ -31,7 +33,8 @@ def main
     :wins => 0
   }
 
-  # all_results = []
+  all_results = []
+  all_wins = []
 
   options[:sessions].times do
 
@@ -62,7 +65,8 @@ def main
       puts "Snakes: #{status[:snakes]}"
     end
 
-    # all_results += roulette.results
+    all_results += roulette.results if options[:'dump-results']
+    all_wins += roulette.wins if options[:'dump-wins']
 
   end
 
@@ -70,12 +74,23 @@ def main
   puts "Wins: #{overall_status[:wins]}"
   puts "Snakes: #{overall_status[:snakes]}"
 
-  # File.open(File.expand_path('~/Dropbox/Mystery7/results.csv'), 'w') do |f|
-  #   f.puts('Roll, Net, Cumulative Net')
-  #   all_results.each do |result|
-  #     f.puts("#{result[:roll]}, #{result[:net]}, #{result[:cumulative_net]}")
-  #   end
-  # end
+  if options[:'dump-results']
+    File.open(File.expand_path('~/Dropbox/Mystery7/results.csv'), 'w') do |f|
+      f.puts('Roll, Net, Cumulative Net')
+      all_results.each do |result|
+        f.puts("#{result[:roll]}, #{result[:net]}, #{result[:cumulative_net]}")
+      end
+    end
+  end
+
+  if options[:'dump-wins']
+    File.open(File.expand_path('~/Dropbox/Mystery7/wins.csv'), 'w') do |f|
+      f.puts('Set, Sequence')
+      all_wins.each do |win|
+        f.puts("#{win[:set]}, #{win[:sequence]}")
+      end
+    end
+  end
 
   puts ">>> Results are in #{options[:database]}." if options[:record]
 end
