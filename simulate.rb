@@ -7,17 +7,19 @@ require './roulette'
 
 def main
   options = Trollop::options do
-    opt :style, "American or European", :type => String, :default => 'American'
-    opt :spins, "Number of spins", :short => 'n', :type => :int, :default => 60
+    opt :american, "American style, with 00", :short => 'a', :default => true
     opt :database, "Filename for results database", :type => String, :default => File.expand_path("~/Projects/Mystery7/results.sqlite")
+    opt :european, "European style, without 00", :short => 'e', :default => false
+    opt :misses, "Number of misses before sleeping", :short => 'm', :default => 4
     opt :record, "Record results", :short => 'r'
     opt :seed, "Seed for the RNG", :type => :int
-    opt :sessions, "Number of sessions to simulate", :short => 's', :type => :int, :default => 100
-    opt :misses, "Number of misses before sleeping", :short => 'm', :default => 4
+    opt :sessions, "Number of sessions to simulate", :short => 's', :type => :int, :default => 1000
+    opt :spins, "Number of spins", :short => 'n', :type => :int, :default => 45
     opt :verbose, "Print stats after each spin", :short => 'v'
   end
 
-  puts ">>> Simulating #{options[:sessions]} #{options[:style]} style games of #{options[:spins]} spins, sleeping after #{options[:misses]} miss#{options[:misses] > 0 ? 'es' : ''}..."
+  options[:style] = options[:european] ? 'European' : 'American'
+  puts ">>> Simulating #{options[:sessions]} #{options[:style]} style sessions of #{options[:spins]} spins, sleeping after #{options[:misses]} miss#{options[:misses] > 0 ? 'es' : ''}..."
 
   roulette = Roulette.new(options.dup)
 

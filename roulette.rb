@@ -49,14 +49,14 @@ class Roulette
     Sets.keys.each do |key|
       @sets[key] = Sets[key].dup
     end
-    if @options[:style] == 'American'
+    if @options[:american]
       @sets[:z] << 37
     else
       @sets[:z].insert(2, 5)
     end
 
     # generated numbers are from 0 to max
-    @max = @options[:style] == 'American' ? 38 : 37
+    @max = @options[:american] ? 38 : 37
 
     total_per_number = 0
     @net_profits = BettingSequence.map do |n|
