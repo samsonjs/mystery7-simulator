@@ -36,6 +36,8 @@ class Roulette
       @sets[:z].insert(2, 5)
     end
 
+    @rng = @options[:seed] ? Random.new(@options[:seed]) : Random.new
+
     # generated numbers are from 0 to max
     @max = @options[:american] ? 38 : 37
 
@@ -63,7 +65,6 @@ class Roulette
 
     @results = []
     @counts = Hash.new { 0 }
-    @rng = @options[:seed] ? Random.new(@options[:seed]) : Random.new
 
     @options[:spins].times do
       result = spin
