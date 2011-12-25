@@ -25,7 +25,7 @@ def main
 
   roulette = Roulette.new(options.dup)
 
-  puts ">>> Seed: #{roulette.seed}"
+  # puts ">>> Seed: #{roulette.seed}"
 
   overall_status = {
     :net => 0,

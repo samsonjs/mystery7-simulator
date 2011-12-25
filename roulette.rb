@@ -36,8 +36,6 @@ class Roulette
       @sets[:z].insert(2, 5)
     end
 
-    @rng = @options[:seed] ? Random.new(@options[:seed]) : Random.new
-
     # generated numbers are from 0 to max
     @max = @options[:american] ? 38 : 37
 
@@ -67,6 +65,7 @@ class Roulette
     @counts = Hash.new { 0 }
     @closing = false
     @closed = false
+    @rng = @options[:seed] ? Random.new(@options[:seed]) : Random.new
 
     @options[:spins].times do |i|
       break if @options[:spins] - i < 10 && @cumulative_net > 100
