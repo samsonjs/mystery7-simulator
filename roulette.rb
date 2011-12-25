@@ -22,7 +22,7 @@ class Roulette
   # best
   BettingSequence = [1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 6, 7, 8, 10, 12, 15, 18]
 
-  attr_accessor :results, :counts, :set_status, :wins
+  attr_accessor :results, :counts, :set_status, :wins, :closing
 
   def initialize(options)
     @options = options
@@ -41,22 +41,21 @@ class Roulette
     # generated numbers are from 0 to max
     @max = @options[:american] ? 38 : 37
 
-    total_per_number = 0
-    @net_profits = BettingSequence.map do |n|
-      total_per_number += n
-      36 * n - 7 * total_per_number
-    end
-    @snake_penalty = 7 * total_per_number
+    @net_profits = net_profits_for_sequence(BettingSequence)
+    puts "Profit sequence: #{@net_profits.join(', ')}"
+    @snake_penalty = snake_penalty_for_sequence(BettingSequence)
+    puts "Snake penalty: #{@snake_penalty}"
 
     @cumulative_net = 0
   end
 
   def simulate
     @set_status = {}
-    Sets.keys.each do |key|
-      @set_status[key] = {
+    Sets.keys.each do |letter|
+      @set_status[letter] = {
         :net => 0,
         :sequence => 0,
+        :ghost_sequence => 0,
         :sleeping => true,
         :snakes => 0,
         :wins => 0
@@ -66,8 +65,11 @@ class Roulette
     @results = []
     @wins = []
     @counts = Hash.new { 0 }
+    @closing = false
+    @closed = false
 
-    @options[:spins].times do
+    @options[:spins].times do |i|
+      break if @options[:spins] - i < 10 && @cumulative_net > 100
       result = spin
       record(result) if @options[:record]
       if @results.length % 100_000 == 0
@@ -75,6 +77,10 @@ class Roulette
       elsif @results.length % 10_000 == 0
         print '.'
       end
+    end
+    if @cumulative_net < 100
+      @closing = true
+      spin until closed?
     end
     puts if @results.length >= 10_000
   end
@@ -85,15 +91,25 @@ class Roulette
     net = 0
     @sets.each do |letter, set|
       status = @set_status[letter]
-      if set.include?(n)
+      if set.include?(n) && !status[:closed]
         if status[:sleeping]
           status[:sleeping] = false
         else
           net = @net_profits[status[:sequence]]
-          @wins << { :set => letter, :sequence => 1 + status[:sequence] }
+          @wins << {
+            :set => letter,
+            :sequence => 1 + status[:sequence],
+            :ghost_sequence => 1 + status[:ghost_sequence]
+          }
+          puts "#{letter.upcase} wins #{net} at sequence #{status[:sequence] + 1}" if @options[:verbose]
           status[:net] += net
           status[:sequence] = 0
+          status[:ghost_sequence] = 0
           status[:wins] += 1
+          if closing
+            status[:closed] = true
+            puts "[win] closed set #{letter} on spin #{@results.length + 1}" if @options[:verbose]
+          end
         end
         @counts[letter] += 1
         letters << letter
@@ -101,12 +117,19 @@ class Roulette
     end
     @set_status.each do |letter, status|
       next if letters.include?(letter)
-      status[:sequence] += 1 unless status[:sleeping]
+      unless status[:sleeping] || status[:closed]
+        status[:sequence] += 1
+        status[:ghost_sequence] += 1
+      end
       # snake
       if status[:sequence] >= BettingSequence.length
         puts "#{letter}: SNAKE!" if @options[:verbose]
         status[:sequence] = 0
         status[:sleeping] = true
+        if closing
+          status[:closed] = true
+          puts "[snake] closed set #{letter} on spin #{@results.length + 1}" if @options[:verbose]
+        end
         status[:snakes] += 1
         status[:net] -= @snake_penalty
         net -= @snake_penalty
@@ -115,26 +138,43 @@ class Roulette
         status[:sleeping] = true
       end
     end
+    @closed = @set_status.values.all? { |status| status[:closed] } if closing
     @cumulative_net += net
     result = {
       :roll => n,
       :net => net,
       :cumulative_net => @cumulative_net
     }
+    @results << result
     if @options[:verbose]
-      puts @results.length
+      puts "spin: #{@results.length}"
       puts result.inspect
       @set_status.each do |letter, status|
         puts "#{letter}: #{status.inspect}"
       end
       puts
     end
-    @results << result
     result
   end
 
   def seed
     @rng.seed
+  end
+
+  def closed?
+    @closed
+  end
+
+  def net_profits_for_sequence(sequence)
+    total_per_number = 0
+    sequence.map do |n|
+      total_per_number += n
+      36 * n - 7 * total_per_number
+    end
+  end
+
+  def snake_penalty_for_sequence(sequence)
+    7 * sequence.inject(0) { |sum, n| sum + n }
   end
 
   def db
