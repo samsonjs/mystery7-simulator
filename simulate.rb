@@ -13,15 +13,25 @@ def main
     opt :'dump-wins', "Dump wins to wins.csv in Dropbox"
     opt :european, "European style, without 00", :short => 'e', :default => false
     opt :misses, "Number of misses before sleeping", :short => 'm', :default => 4
+    opt :mystery7, "Use Mystery7 sets", :default => true
+    opt :mystery16, "Use Mystery16 set"
     opt :record, "Record results", :short => 'r'
     opt :seed, "Seed for the RNG", :type => :int
     opt :sessions, "Number of sessions to simulate", :short => 's', :type => :int, :default => 1000
+    opt :sleep, "Sleep after N misses", :default => true
     opt :spins, "Number of spins", :short => 'n', :type => :int, :default => 45
     opt :verbose, "Print stats after each spin", :short => 'v'
   end
 
   options[:style] = options[:european] ? 'European' : 'American'
-  puts ">>> Simulating #{options[:sessions]} #{options[:style]} style sessions of #{options[:spins]} spins, sleeping after #{options[:misses]} miss#{options[:misses] > 0 ? 'es' : ''}..."
+  options[:set] = options[:mystery16] ? :mystery16 : :mystery7
+  if options[:mystery16]
+    options[:mystery7] = false
+    options[:sleep] = false
+  end
+  print ">>> Simulating #{options[:sessions]} #{options[:style]} style sessions of #{options[:spins]} spins"
+  print ", sleeping after #{options[:misses]} miss#{options[:misses] > 0 ? 'es' : ''}" if options[:sleep]
+  puts "..."
 
   roulette = Roulette.new(options.dup)
 
@@ -46,7 +56,7 @@ def main
       :wins => 0
     }
 
-    Roulette::Sets.each do |letter, set|
+    Roulette::Sets[options[:set]].each do |letter, set|
       puts "# of #{letter.to_s.upcase}s: #{roulette.counts[letter]}" if options[:verbose]
       set_status = roulette.set_status[letter]
       puts "status: #{set_status.inspect}" if options[:verbose]

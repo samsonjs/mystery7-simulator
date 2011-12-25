@@ -5,43 +5,59 @@ require 'sqlite3'
 class Roulette
 
   Sets = {
-    :j => [1, 2, 3, 13, 15, 26, 27],
-    :k => [4, 5, 6, 16, 17, 28, 30],
-    :m => [7, 8, 19, 20, 21, 31, 32],
-    :c => [11, 12, 22, 24, 34, 35, 36],
-    :n => [9, 10, 14, 18, 23, 25, 29],
-    :z => [0, 2, 16, 19, 33, 36]
+    :mystery7 => {
+      :j => [1, 2, 3, 13, 15, 26, 27],
+      :k => [4, 5, 6, 16, 17, 28, 30],
+      :m => [7, 8, 19, 20, 21, 31, 32],
+      :c => [11, 12, 22, 24, 34, 35, 36],
+      :n => [9, 10, 14, 18, 23, 25, 29],
+      :z => [0, 2, 16, 19, 33, 36]
+    },
+    :mystery16 => {
+      :j => [0, 1, 2, 3, 13, 15, 26, 27, 11, 12, 22, 24, 33, 34, 35, 36]
+    }
   }
 
-  # original
-  # BettingSequence = [1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 5, 6, 8, 10, 12, 15]
+  BettingSequences = {
+    # original
+    # :mystery7 => [1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 5, 6, 8, 10, 12, 15],
 
-  # better
-  # BettingSequence = [1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8, 10, 12, 15, 18]
+    # better
+    # :mystery7 => [1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8, 10, 12, 15, 18],
 
-  # best
-  BettingSequence = [1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 6, 7, 8, 10, 12, 15, 18]
+    # best
+    :mystery7 => [1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 6, 7, 8, 10, 12, 15, 18],
+
+    :mystery16 => [1, 2, 4, 8, 16, 25, 50, 100]
+  }
 
   attr_accessor :results, :counts, :set_status, :wins, :closing
 
   def initialize(options)
     @options = options
     @sets = {}
-    Sets.keys.each do |key|
-      @sets[key] = Sets[key].dup
+    sets = Sets[@options[:set]]
+    sets.keys.each do |key|
+      @sets[key] = sets[key].dup
     end
-    if @options[:american]
-      @sets[:z] << 37
-    else
-      @sets[:z].insert(2, 5)
+
+    if @options[:mystery7]
+      if @options[:american]
+        @sets[:z] << 37
+      else
+        @sets[:z].insert(2, 5)
+      end
     end
 
     # generated numbers are from 0 to max
     @max = @options[:american] ? 38 : 37
 
-    @net_profits = net_profits_for_sequence(BettingSequence)
+    @multiplier = @options[:mystery16] ? 16 : 7
+    @betting_sequence = BettingSequences[@options[:set]]
+
+    @net_profits = net_profits_for_sequence(@betting_sequence)
     puts "Profit sequence: #{@net_profits.join(', ')}"
-    @snake_penalty = snake_penalty_for_sequence(BettingSequence)
+    @snake_penalty = snake_penalty_for_sequence(@betting_sequence)
     puts "Snake penalty: #{@snake_penalty}"
 
     @cumulative_net = 0
@@ -49,7 +65,7 @@ class Roulette
 
   def simulate
     @set_status = {}
-    Sets.keys.each do |letter|
+    @sets.keys.each do |letter|
       @set_status[letter] = {
         :net => 0,
         :sequence => 0,
@@ -68,7 +84,7 @@ class Roulette
     @rng = @options[:seed] ? Random.new(@options[:seed]) : Random.new
 
     @options[:spins].times do |i|
-      break if @options[:spins] - i < 10 && @cumulative_net > 100
+      break if @options[:mystery7] && @options[:spins] - i < 10 && @cumulative_net > 100
       result = spin
       record(result) if @options[:record]
       if @results.length % 100_000 == 0
@@ -77,7 +93,7 @@ class Roulette
         print '.'
       end
     end
-    if @cumulative_net < 100
+    if @options[:mystery7] && @cumulative_net < 100
       @closing = true
       spin until closed?
     end
@@ -121,10 +137,10 @@ class Roulette
         status[:ghost_sequence] += 1
       end
       # snake
-      if status[:sequence] >= BettingSequence.length
+      if status[:sequence] >= @betting_sequence.length
         puts "#{letter}: SNAKE!" if @options[:verbose]
         status[:sequence] = 0
-        status[:sleeping] = true
+        status[:sleeping] = true if @options[:sleep]
         if closing
           status[:closed] = true
           puts "[snake] closed set #{letter} on spin #{@results.length + 1}" if @options[:verbose]
@@ -133,7 +149,7 @@ class Roulette
         status[:net] -= @snake_penalty
         net -= @snake_penalty
       end
-      if status[:sequence] > 0 && status[:sequence] % @options[:misses] == 0
+      if @options[:sleep] && status[:sequence] > 0 && status[:sequence] % @options[:misses] == 0
         status[:sleeping] = true
       end
     end
@@ -168,12 +184,12 @@ class Roulette
     total_per_number = 0
     sequence.map do |n|
       total_per_number += n
-      36 * n - 7 * total_per_number
+      36 * n - @multiplier * total_per_number
     end
   end
 
   def snake_penalty_for_sequence(sequence)
-    7 * sequence.inject(0) { |sum, n| sum + n }
+    @multiplier * sequence.inject(0) { |sum, n| sum + n }
   end
 
   def db
