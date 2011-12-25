@@ -75,7 +75,7 @@ def main
   puts "Snakes: #{overall_status[:snakes]}"
 
   if options[:'dump-results']
-    File.open(File.expand_path('~/Dropbox/Mystery7/results.csv'), 'w') do |f|
+    File.open(File.expand_path('~/Desktop/results.csv'), 'w') do |f|
       f.puts('Roll, Net, Cumulative Net')
       all_results.each do |result|
         f.puts("#{result[:roll]}, #{result[:net]}, #{result[:cumulative_net]}")
@@ -84,10 +84,10 @@ def main
   end
 
   if options[:'dump-wins']
-    File.open(File.expand_path('~/Dropbox/Mystery7/wins.csv'), 'w') do |f|
-      f.puts('Set, Sequence')
+    File.open(File.expand_path('~/Desktop/wins.csv'), 'w') do |f|
+      f.puts('Set, Sequence, Ghost Sequence')
       all_wins.each do |win|
-        f.puts("#{win[:set]}, #{win[:sequence]}")
+        f.puts("#{win[:set]}, #{win[:sequence]}, #{win[:ghost_sequence]}")
       end
     end
   end
