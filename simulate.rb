@@ -9,8 +9,8 @@ def main
   options = Trollop::options do
     opt :american, "American style, with 00", :short => 'a', :default => true
     opt :database, "Filename for results database", :type => String, :default => File.expand_path("~/Projects/Mystery7/results.sqlite")
-    opt :'dump-results', "Dump results to results.csv in Dropbox"
-    opt :'dump-wins', "Dump wins to wins.csv in Dropbox"
+    opt :'dump-results', "Dump results to results.csv in Desktop"
+    opt :'dump-wins', "Dump wins to wins.csv in Desktop"
     opt :european, "European style, without 00", :short => 'e', :default => false
     opt :misses, "Number of misses before sleeping", :short => 'm', :default => 4
     opt :record, "Record results", :short => 'r'
